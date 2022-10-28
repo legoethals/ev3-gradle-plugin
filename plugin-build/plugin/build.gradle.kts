@@ -4,16 +4,20 @@ plugins {
     kotlin("jvm").version("1.6.21") //TODO Check toml linking
     id("maven-publish")
     id("com.gradle.plugin-publish") version "1.0.0"
-    idea
+//    id ("com.github.johnrengelman.shadow") version "7.1.2"
+//    id("org.jetbrains.gradle.plugin.idea-ext") version "1.1.6"
 }
 
 repositories {
     mavenCentral()
+    gradlePluginPortal()
 }
 
 dependencies {
     implementation(kotlin("stdlib"))
     implementation(gradleApi())
+    implementation("gradle.plugin.com.github.johnrengelman:shadow:7.1.2")
+    implementation("gradle.plugin.org.jetbrains.gradle.plugin.idea-ext:gradle-idea-ext:1.1.6")
 
     testImplementation("org.junit.jupiter:junit-jupiter:5.8.1")
 }

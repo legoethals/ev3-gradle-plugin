@@ -1,13 +1,28 @@
 plugins {
-    java
+    kotlin("jvm") version "1.6.0"
     id("com.legoethals.ev3.d3v")
+    id("org.jetbrains.gradle.plugin.idea-ext") version "1.1.6"
+//    id("me.qoomon.git-versioning") version "6.3.5"
+
 }
 
+//TODO Git versioning
+//version = "0.0.0-SNAPSHOT"
+//gitVersioning.apply {
+//    // see configuration documentation below
+//}
+
+version = "1.0.69"
+
 ev3 {
-    customData {
-        welcomeMessage.set("Hi there!!!")
+    mainClass.set("com.legoethals.ev3.TestisKt")
+
+    ssh {
+        hostname.set("ev2_usb")
+
     }
 }
+
 //
 //templateExampleConfig {
 //    message.set("Just trying this gradle plugin...")

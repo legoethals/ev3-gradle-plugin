@@ -1,6 +1,7 @@
 package com.legoethals.ev3
 
 import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Nested
 
 
@@ -8,18 +9,32 @@ import org.gradle.api.tasks.Nested
 //A named managed type is a managed type that additionally has an abstract property "name" of type String. Named managed types are especially useful as the element type of NamedDomainObjectContainer (see below).
 abstract class Ev3PluginExtension {
 
-    abstract val outputDir: RegularFileProperty
+//    abstract val outputDir: RegularFileProperty
 
     @get:Nested
-    abstract val customData: CustomData
+    abstract val sshConfig: SshConfig
 
-//    open fun customData(action: Action<in CustomData>) {
-//        action.execute(customData)
-//    }
+    @get:Nested
+    abstract val debugConfig: DebugConfig
 
-    fun customData(config: CustomData.() -> Unit) {
-        customData.config()
+    abstract val jarDestinationDir: Property<String>
+
+    abstract val mainClass: Property<String>
+
+    fun ssh(config: SshConfig.() -> Unit) {
+        sshConfig.config()
     }
+
+    fun debug(config: DebugConfig.() -> Unit) {
+        debugConfig.config()
+    }
+
+    init {
+        jarDestinationDir.convention("/home/lejos/programs")
+    }
+
+
+
 //    fun getResources(): NamedDomainObjectContainer<SomeConfig>
 
 //    private val someConfig: SomeConfig
