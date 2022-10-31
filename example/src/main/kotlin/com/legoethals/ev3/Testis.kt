@@ -6,7 +6,7 @@ class Testis(
     private val motor: RegulatedMotor
 ) {
     fun main (vararg args: String){
-        println("brol2.")
+        println("brol2.3")
     }
 
 }

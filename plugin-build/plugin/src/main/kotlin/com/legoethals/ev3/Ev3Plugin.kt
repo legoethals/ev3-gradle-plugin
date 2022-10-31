@@ -3,6 +3,7 @@ package com.legoethals.ev3
 import com.legoethals.ev3.ssh.Ev3SshService
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import org.gradle.api.logging.LogLevel
 import org.gradle.api.plugins.ApplicationPlugin
 import org.gradle.api.plugins.ExtensionAware
 import org.gradle.kotlin.dsl.*
@@ -40,6 +41,8 @@ class Ev3Plugin : Plugin<Project> {
         }
 
         project.tasks.register<Ev3DeployTask>("ev3Deploy", Ev3SshService()).configure {
+            doFirst {logger.log(LogLevel.INFO, "Deploying code version ${project.version}")}
+            doLast { logger.log(LogLevel.INFO, "Code deployed")}
             inputArtifact.set(ev3AppJar.flatMap { it.archiveFile })
             inputArtifactMd5.set(ev3AppJar.flatMap { it.archiveMd5File })
             artifactDestination.set(ev3config.jarDestinationDir)
@@ -48,6 +51,8 @@ class Ev3Plugin : Plugin<Project> {
 
         //TODO Exclude project version from dependencies so when working with git plugin to set project version, dependencies are not always redeployed
         project.tasks.register<Ev3DeployTask>("ev3DeployDependencies", Ev3SshService()).configure {
+            doFirst {logger.log(LogLevel.INFO, "Deploying dependencies...")}
+            doLast { logger.log(LogLevel.INFO, "Dependencies deployed")}
             inputArtifact.set(ev3DependenciesJar.flatMap { it.archiveFile })
             inputArtifactMd5.set(ev3DependenciesJar.flatMap { it.archiveMd5File })
             artifactDestination.set(ev3config.getJarLibsAbsoluteDir())

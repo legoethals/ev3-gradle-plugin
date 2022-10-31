@@ -5,15 +5,10 @@ plugins {
 
 }
 
-//TODO Git versioning
-//version = "0.0.0-SNAPSHOT"
-//gitVersioning.apply {
-//    // see configuration documentation below
-//}
-
 version = "0.0.0-SNAPSHOT"
 gitVersioning.apply {
     refs {
+        considerTagsOnBranches = true
         tag("(?<version>.*)") {
             version = "\${ref.version}"
         }
@@ -27,8 +22,6 @@ gitVersioning.apply {
         version = "\${commit}"
     }
 }
-
-println(version)
 
 ev3 {
     mainClass.set("com.legoethals.ev3.TestisKt")

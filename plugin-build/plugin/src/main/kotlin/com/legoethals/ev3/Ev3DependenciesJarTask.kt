@@ -10,8 +10,8 @@ abstract class Ev3DependenciesJarTask : ShadowJar() {
         val objectFactory = project.objects
         description = "Creates a jar with implementation dependencies for the app"
         mergeServiceFiles()
+        archiveVersion.set("")
         archiveClassifier.set("dependencies")
-        //    archiveClassifier.set("dependencies") //-> classifier vs appendix?
         //Lookup these excludes
         exclude("META-INF/INDEX.LIST", "META-INF/*.SF", "META-INF/*.DSA", "META-INF/*.RSA", "module-info.class")
         //All because the output directory is not protected :/

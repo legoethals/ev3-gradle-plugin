@@ -11,6 +11,7 @@ abstract class Ev3JarTask : ShadowJar() {
     init {
         description = "Creates a jar with classes from the ${SourceSet.MAIN_SOURCE_SET_NAME} sourceset"
         mergeServiceFiles()
+        archiveVersion.set("")
         archiveClassifier.set("app")
 
         val sourceSets = project.extensions.getByType(SourceSetContainer::class.java)
