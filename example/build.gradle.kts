@@ -14,11 +14,11 @@ plugins {
 version = "0.0.0-SNAPSHOT"
 gitVersioning.apply {
     refs {
-        branch(".+") {
-            version = "\${ref}-SNAPSHOT"
-        }
         tag("(?<version>.*)") {
             version = "\${ref.version}"
+        }
+        branch(".+") {
+            version = "\${ref}-SNAPSHOT"
         }
     }
 
