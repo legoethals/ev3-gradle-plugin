@@ -1,6 +1,5 @@
 plugins {
     `kotlin-dsl`
-//    id("org.jetbrains.kotlin.jvm") version "1.6.21"
     kotlin("jvm").version("1.6.21") //TODO Check toml linking
     id("maven-publish")
     id("com.gradle.plugin-publish") version "1.0.0"
@@ -18,13 +17,27 @@ dependencies {
     implementation(gradleApi())
     implementation("gradle.plugin.com.github.johnrengelman:shadow:7.1.2")
     implementation("gradle.plugin.org.jetbrains.gradle.plugin.idea-ext:gradle-idea-ext:1.1.6")
+    implementation("com.hierynomus:sshj:0.34.0")
+    implementation(platform("org.testcontainers:testcontainers-bom:1.17.5"))
 
-    testImplementation("org.junit.jupiter:junit-jupiter:5.8.1")
+    testImplementation("org.junit.jupiter:junit-jupiter:5.9.0")
+    testImplementation("org.testcontainers:testcontainers")
+    testImplementation("org.testcontainers:junit-jupiter")
 }
 
 java {
     sourceCompatibility = JavaVersion.VERSION_1_8
     targetCompatibility = JavaVersion.VERSION_1_8
+}
+
+tasks.test {
+    useJUnitPlatform()
+    testLogging {
+        events("failed")
+        exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
+        showExceptions = true
+        showStackTraces = true
+    }
 }
 
 publishing {

@@ -1,15 +1,11 @@
 package com.legoethals.ev3
 
-import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
+import com.legoethals.ev3.ssh.Ev3SshService
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.plugins.ApplicationPlugin
 import org.gradle.api.plugins.ExtensionAware
-import org.gradle.api.plugins.JavaApplication
-import org.gradle.api.tasks.SourceSet
-import org.gradle.api.tasks.SourceSetContainer
-import org.gradle.kotlin.dsl.create
-import org.gradle.kotlin.dsl.the
+import org.gradle.kotlin.dsl.*
 import org.gradle.plugins.ide.idea.IdeaPlugin
 import org.gradle.plugins.ide.idea.model.IdeaLanguageLevel
 import org.jetbrains.gradle.ext.runConfigurations
@@ -22,62 +18,49 @@ class Ev3Plugin : Plugin<Project> {
 
         project.plugins.apply(ApplicationPlugin::class.java)
 
-        //Add an extension object and make it available to the project
         val ev3config = project.extensions.create<Ev3PluginExtension>("ev3")
-
-        val customFile = project.objects.fileProperty()
 
         project.configurations.getByName("compileOnly") {
             dependencies.add(project.dependencies.create("com.github.bdeneuter:lejos-ev3-api:0.9.1-beta"))
         }
 
-        //TODO Only apply if jar task is available
-
-        val appJar = project.tasks.register("ev3AppJar", ShadowJar::class.java) {
-            mergeServiceFiles()
-            archiveClassifier.set("app")
-            val sourceSets = project.extensions.getByType(SourceSetContainer::class.java)
-
-            val main: SourceSet = sourceSets.getByName(SourceSet.MAIN_SOURCE_SET_NAME)
-            from(main.output)
-
-//            doLast { //TODO Check setup (version and mainclass must be set before this code is executed
-            manifest {
-                attributes["Implementation-Version"] = project.version.toString()
-                attributes["Main-Class"] = ev3config.mainClass.get()
-                //!! As a side note, when you specify the classpath by using -jar, -cp, or -classpath, you override the system variable CLASSPATH.
-                // -> https://docs.oracle.com/javase/7/docs/technotes/tools/findingclasses.html
-//        Class path has to contain
-                attributes["Class-Path"] = "libs/gradletest-1.0.0-dependencies.jar" //TODO Take from dependencyShadowJar output
-            }
-//            }
+        val ev3DependenciesConfiguration = project.configurations.register("ev3Dependencies") {
+            extendsFrom(project.configurations.getByName("implementation"))
+            isCanBeResolved = true
         }
 
-        val dependenciesJar = project.tasks.register("ev3DependenciesJar", ShadowJar::class.java) {
-            dependsOn(appJar)
-            mergeServiceFiles()
-            archiveClassifier.set("dependencies")
-            //    archiveClassifier.set("dependencies") //-> classifier vs appendix?
-            val implementationConfig = project.configurations.getByName("implementation")
-            implementationConfig.isCanBeResolved = true //https://github.com/johnrengelman/shadow/issues/448
-            configurations = listOf(implementationConfig)
-            //Lookup these excludes
-            exclude("META-INF/INDEX.LIST", "META-INF/*.SF", "META-INF/*.DSA", "META-INF/*.RSA", "module-info.class")
+        val ev3DependenciesJar by project.tasks.registering(Ev3DependenciesJarTask::class) {
+            configurations = listOf(ev3DependenciesConfiguration.get())
         }
 
-        val splitShadowJar = project.tasks.create("splitShadowJar") {
-            dependsOn(dependenciesJar)
-
-            doLast {
-                println("Building separate src and dependency shadowjars")
-            }
+        val ev3AppJar by project.tasks.registering(Ev3JarTask::class) {
+            dependenciesFile.set(ev3DependenciesJar.flatMap { it.archiveFile })
+            jarLibsRelativeDir.set(ev3config.jarLibsRelativeDir)
+            mainClassName.set(ev3config.mainClass)
         }
 
-        project.tasks.register("customBrol", Ev3CustomTask::class.java) {
-            customFile.set(project.layout.buildDirectory.file("hello.txt"))
-//            println(ev3config.getResources())
-//            inputBrol.set(ev3Extension.getResources().get())
-            destination.set(customFile)
+        project.tasks.register<Ev3DeployTask>("ev3Deploy", Ev3SshService()).configure {
+            inputArtifact.set(ev3AppJar.flatMap { it.archiveFile })
+            inputArtifactMd5.set(ev3AppJar.flatMap { it.archiveMd5File })
+            artifactDestination.set(ev3config.jarDestinationDir)
+            artifactChecksumDestination.set(ev3config.jarDestinationDir)
+        }
+
+        //TODO Exclude project version from dependencies so when working with git plugin to set project version, dependencies are not always redeployed
+        project.tasks.register<Ev3DeployTask>("ev3DeployDependencies", Ev3SshService()).configure {
+            inputArtifact.set(ev3DependenciesJar.flatMap { it.archiveFile })
+            inputArtifactMd5.set(ev3DependenciesJar.flatMap { it.archiveMd5File })
+            artifactDestination.set(ev3config.getJarLibsAbsoluteDir())
+            artifactChecksumDestination.set(ev3config.getJarLibsAbsoluteDir())
+        }
+
+        project.tasks.register<Ev3RunTask>("ev3Run", Ev3SshService()).configure {
+            dependsOn(project.tasks.withType(Ev3DeployTask::class))
+        }
+
+        project.tasks.register<Ev3RunTask>("ev3RunDebug", Ev3SshService()).configure {
+            dependsOn(project.tasks.withType(Ev3DeployTask::class))
+            debug.set(true)
         }
 
         //TODO Extend plugin for kotlin?
@@ -86,7 +69,6 @@ class Ev3Plugin : Plugin<Project> {
 //                jvmTarget = "1.8"
 //            }
 //        }
-
 
         //TODO Extend plugin for idea?
         project.plugins.withType(IdeaPlugin::class.java) {
@@ -101,13 +83,6 @@ class Ev3Plugin : Plugin<Project> {
                         }
                     }
                 }
-            }
-        }
-
-        project.task("brol") {//ad hoc task (not-so-custom)
-            doLast {
-                val hostname = ev3config.sshConfig.hostname.get()
-                println("Your ev3 hostname is $hostname, Joris")
             }
         }
 

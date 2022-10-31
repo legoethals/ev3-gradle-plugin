@@ -1,6 +1,5 @@
 package com.legoethals.ev3
 
-import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Nested
 
@@ -18,8 +17,11 @@ abstract class Ev3PluginExtension {
     abstract val debugConfig: DebugConfig
 
     abstract val jarDestinationDir: Property<String>
+    abstract val jarLibsRelativeDir: Property<String>
 
     abstract val mainClass: Property<String>
+
+    fun getJarLibsAbsoluteDir(): String = jarDestinationDir.get().trimEnd('/') + "/" + jarLibsRelativeDir.get().trimStart('/').trimEnd('/') + "/"
 
     fun ssh(config: SshConfig.() -> Unit) {
         sshConfig.config()
@@ -31,34 +33,6 @@ abstract class Ev3PluginExtension {
 
     init {
         jarDestinationDir.convention("/home/lejos/programs")
+        jarLibsRelativeDir.convention("libs/")
     }
-
-
-
-//    fun getResources(): NamedDomainObjectContainer<SomeConfig>
-
-//    private val someConfig: SomeConfig
-//    @Inject
-//    constructor(objectFactory: ObjectFactory){
-//        someConfig = objectFactory.newInstance(SomeConfig::class.java)
-//    }
-
-//    val message: Property<String>
-//
-//    init {
-//        message.convention("Hello there!")
-//    }
 }
-//
-//interface SomeConfig {
-//    //Type must have a read-only 'name' property
-//    fun getName(): String
-//    fun getSomeCoolProperty(): Property<String>
-//
-//    fun getNestedConfig(): NamedDomainObjectContainer<SomeNestedConfig>
-//
-//}
-//
-//interface  SomeNestedConfig {
-//    fun getSomeOtherProperty(): Property<Int>
-//}

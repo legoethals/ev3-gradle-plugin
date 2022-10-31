@@ -1,8 +1,7 @@
 plugins {
     kotlin("jvm") version "1.6.0"
     id("com.legoethals.ev3.d3v")
-    id("org.jetbrains.gradle.plugin.idea-ext") version "1.1.6"
-//    id("me.qoomon.git-versioning") version "6.3.5"
+    id("me.qoomon.git-versioning") version "6.3.5"
 
 }
 
@@ -12,7 +11,9 @@ plugins {
 //    // see configuration documentation below
 //}
 
-version = "1.0.69"
+//version = "1.0.72"
+
+println(version)
 
 ev3 {
     mainClass.set("com.legoethals.ev3.TestisKt")
@@ -23,6 +24,16 @@ ev3 {
     }
 }
 
+dependencies {
+    implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
+    implementation("io.projectreactor:reactor-core:3.4.14")
+}
+
+val hello by tasks.registering {
+    doLast {
+        println("hello there!")
+    }
+}
 //
 //templateExampleConfig {
 //    message.set("Just trying this gradle plugin...")
