@@ -11,7 +11,22 @@ plugins {
 //    // see configuration documentation below
 //}
 
-//version = "1.0.72"
+version = "0.0.0-SNAPSHOT"
+gitVersioning.apply {
+    refs {
+        branch(".+") {
+            version = "\${ref}-SNAPSHOT"
+        }
+        tag("v(?<version>.*)") {
+            version = "\${ref.version}"
+        }
+    }
+
+    // optional fallback configuration in case of no matching ref configuration
+    rev {
+        version = "\${commit}"
+    }
+}
 
 println(version)
 
