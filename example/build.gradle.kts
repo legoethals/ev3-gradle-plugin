@@ -1,27 +1,12 @@
 plugins {
     kotlin("jvm") version "1.6.0"
     id("com.legoethals.ev3.d3v")
-    id("me.qoomon.git-versioning") version "6.3.5"
-
+    id("com.palantir.git-version") version "0.15.0"
 }
 
-version = "0.0.0-SNAPSHOT"
-gitVersioning.apply {
-    refs {
-        considerTagsOnBranches = true
-        tag("(?<version>.*)") {
-            version = "\${ref.version}"
-        }
-        branch(".+") {
-            version = "\${ref}-SNAPSHOT"
-        }
-    }
 
-    // optional fallback configuration in case of no matching ref configuration
-    rev {
-        version = "\${commit}"
-    }
-}
+val gitVersion: groovy.lang.Closure<String> by extra
+version = gitVersion()
 
 ev3 {
     mainClass.set("com.legoethals.ev3.TestisKt")
@@ -35,6 +20,7 @@ ev3 {
 dependencies {
     implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
     implementation("io.projectreactor:reactor-core:3.4.14")
+
 }
 
 val hello by tasks.registering {

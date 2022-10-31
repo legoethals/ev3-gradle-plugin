@@ -36,7 +36,6 @@ abstract class Ev3DeployTask @Inject constructor(private val sshService: SshServ
 
     @TaskAction
     fun deploy() {
-        println("Deploying...")
 //        val artifactMd5 = inputArtifactMd5.get().asFile.readText()
 //        val remoteMd5: String = sshService.downloadFileContents(artifactChecksumDestination.get())
 //        if(artifactMd5 == remoteMd5) {
