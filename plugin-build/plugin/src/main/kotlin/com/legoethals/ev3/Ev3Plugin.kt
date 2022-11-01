@@ -1,6 +1,6 @@
 package com.legoethals.ev3
 
-import com.legoethals.ev3.ssh.Ev3SshService
+import com.legoethals.ev3.ssh.Ev3SshServiceProvider
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.logging.LogLevel
@@ -40,32 +40,41 @@ class Ev3Plugin : Plugin<Project> {
             mainClassName.set(ev3config.mainClass)
         }
 
-        project.tasks.register<Ev3DeployTask>("ev3Deploy", Ev3SshService()).configure {
+        project.tasks.register<Ev3DeployTask>("ev3Deploy", Ev3SshServiceProvider(ev3config.sshConfig)).configure {
             doFirst {logger.log(LogLevel.LIFECYCLE, "Deploying code version ${project.version}")}
             doLast { logger.log(LogLevel.LIFECYCLE, "Code deployed")}
             inputArtifact.set(ev3AppJar.flatMap { it.archiveFile })
             inputArtifactMd5.set(ev3AppJar.flatMap { it.archiveMd5File })
-            artifactDestination.set(ev3config.jarDestinationDir)
-            artifactChecksumDestination.set(ev3config.jarDestinationDir)
+            artifactDestinationDir.set(ev3config.jarDestinationDir)
+            artifactChecksumDestinationDir.set(ev3config.jarDestinationDir)
         }
 
-        //TODO Exclude project version from dependencies so when working with git plugin to set project version, dependencies are not always redeployed
-        project.tasks.register<Ev3DeployTask>("ev3DeployDependencies", Ev3SshService()).configure {
+        project.tasks.register<Ev3DeployTask>("ev3DeployDependencies", Ev3SshServiceProvider(ev3config.sshConfig)).configure {
             doFirst {logger.log(LogLevel.LIFECYCLE, "Deploying dependencies...")}
             doLast { logger.log(LogLevel.LIFECYCLE, "Dependencies deployed")}
             inputArtifact.set(ev3DependenciesJar.flatMap { it.archiveFile })
             inputArtifactMd5.set(ev3DependenciesJar.flatMap { it.archiveMd5File })
-            artifactDestination.set(ev3config.getJarLibsAbsoluteDir())
-            artifactChecksumDestination.set(ev3config.getJarLibsAbsoluteDir())
+            artifactDestinationDir.set(ev3config.getJarLibsAbsoluteDir())
+            artifactChecksumDestinationDir.set(ev3config.getJarLibsAbsoluteDir())
         }
 
-        project.tasks.register<Ev3RunTask>("ev3Run", Ev3SshService()).configure {
+        project.tasks.register<Ev3RunTask>("ev3Run", Ev3SshServiceProvider(ev3config.sshConfig)).configure {
             dependsOn(project.tasks.withType(Ev3DeployTask::class))
+            jarDestinationDir.set(ev3config.jarDestinationDir)
+            jarFileName.set(ev3AppJar.flatMap { project.provider { it.archiveFile.get().asFile.name} })
+            mainClass.set(ev3config.mainClass)
         }
 
-        project.tasks.register<Ev3RunTask>("ev3RunDebug", Ev3SshService()).configure {
+        project.tasks.register<Ev3RunTask>("ev3RunDebug", Ev3SshServiceProvider(ev3config.sshConfig)).configure {
             dependsOn(project.tasks.withType(Ev3DeployTask::class))
             debug.set(true)
+            debugConfig.apply {
+                localPort.set(ev3config.debugConfig.localPort)
+                remotePort.set(ev3config.debugConfig.remotePort)
+            }
+            jarDestinationDir.set(ev3config.jarDestinationDir)
+            jarFileName.set(ev3AppJar.flatMap { project.provider { it.archiveFile.get().asFile.name} })
+            mainClass.set(ev3config.mainClass)
         }
 
         //TODO Extend plugin for kotlin?
@@ -84,7 +93,7 @@ class Ev3Plugin : Plugin<Project> {
                     vcs = "Git"
                     settings {
                         runConfigurations {
-                            create("YieldApp [Dev]", org.jetbrains.gradle.ext.Application::class.java)
+                            create("Remote debug [${ev3config.debugConfig.localPort}]", org.jetbrains.gradle.ext.Application::class.java)
                         }
                     }
                 }

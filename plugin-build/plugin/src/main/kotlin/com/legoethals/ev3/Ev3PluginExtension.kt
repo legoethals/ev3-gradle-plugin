@@ -4,11 +4,7 @@ import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Nested
 
 
-//Managed types = abstract class or interface with no fields and whose properties are all managed
-//A named managed type is a managed type that additionally has an abstract property "name" of type String. Named managed types are especially useful as the element type of NamedDomainObjectContainer (see below).
 abstract class Ev3PluginExtension {
-
-//    abstract val outputDir: RegularFileProperty
 
     @get:Nested
     abstract val sshConfig: SshConfig
@@ -19,6 +15,7 @@ abstract class Ev3PluginExtension {
     abstract val jarDestinationDir: Property<String>
     abstract val jarLibsRelativeDir: Property<String>
 
+    //Do not forget the Kt at the end of classname if needed!
     abstract val mainClass: Property<String>
 
     fun getJarLibsAbsoluteDir(): String = jarDestinationDir.get().trimEnd('/') + "/" + jarLibsRelativeDir.get().trimStart('/').trimEnd('/') + "/"

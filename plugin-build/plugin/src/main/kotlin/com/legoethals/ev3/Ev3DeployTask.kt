@@ -1,25 +1,29 @@
 package com.legoethals.ev3
 
-import com.legoethals.ev3.ssh.SshService
+import com.legoethals.ev3.ssh.SshServiceProvider
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFile
-import org.gradle.api.tasks.OutputFile
-import org.gradle.api.tasks.StopExecutionException
 import org.gradle.api.tasks.TaskAction
+import org.gradle.internal.impldep.com.google.common.collect.TreeTraverser.using
 import javax.inject.Inject
 
-abstract class Ev3DeployTask @Inject constructor(private val sshService: SshService) : DefaultTask() {
+abstract class Ev3DeployTask @Inject constructor(private val sshServiceProvider: SshServiceProvider) : DefaultTask() {
 
     init {
         outputs.upToDateWhen { checkDeployedArtifactUpToDate() }
     }
 
     private fun checkDeployedArtifactUpToDate(): Boolean {
-        return true
-        TODO("Not yet implemented")
+        val sshService = sshServiceProvider.create()
+        val currentMd5File = inputArtifactMd5.get().asFile
+        val currentArtifactMd5 = currentMd5File.readText()
+        val remoteArtifactMd5FilePath = artifactChecksumDestinationDir.get().trimEnd('/') + "/" + currentMd5File.name
+        val remoteArtifactMd5 = sshService.downloadFileContents(remoteArtifactMd5FilePath)
+        logger.debug("Comparing local hash: '$currentArtifactMd5' to remote hash '$remoteArtifactMd5' fetched from location '$remoteArtifactMd5FilePath'" )
+        return currentArtifactMd5 == remoteArtifactMd5
     }
 
     @get:InputFile
@@ -29,26 +33,18 @@ abstract class Ev3DeployTask @Inject constructor(private val sshService: SshServ
     abstract val inputArtifactMd5: RegularFileProperty
 
     @get:Input
-    abstract val artifactDestination: Property<String>
+    abstract val artifactDestinationDir: Property<String>
 
     @get:Input
-    abstract val artifactChecksumDestination: Property<String>
+    abstract val artifactChecksumDestinationDir: Property<String>
 
     @TaskAction
     fun deploy() {
-//        val artifactMd5 = inputArtifactMd5.get().asFile.readText()
-//        val remoteMd5: String = sshService.downloadFileContents(artifactChecksumDestination.get())
-//        if(artifactMd5 == remoteMd5) {
-////            throw StopExecutionException()
-//            return;
-//        }
-//
-//        sshService.mkdirs(artifactDestination.get())
-//        sshService.mkdirs(artifactChecksumDestination.get())
-//
-//        sshService.upload(artifactDestination.get(), inputArtifact.get().asFile)
-//        sshService.upload(artifactChecksumDestination.get(), inputArtifactMd5.get().asFile)
-
-        //TODO Write to output
+        sshServiceProvider.create().use {
+            it.mkdirs(artifactDestinationDir.get())
+            it.upload(artifactDestinationDir.get(), inputArtifact.get().asFile)
+            it.mkdirs(artifactChecksumDestinationDir.get())
+            it.upload(artifactChecksumDestinationDir.get(), inputArtifactMd5.get().asFile)
+        }
     }
 }
