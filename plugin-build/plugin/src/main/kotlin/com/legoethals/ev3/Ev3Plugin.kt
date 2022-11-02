@@ -104,10 +104,3 @@ class Ev3Plugin : Plugin<Project> {
 
 
 }
-
-//To get config support when using buildSrc...
-fun Project.ev3Config(config: Ev3PluginExtension.() -> Unit): Ev3PluginExtension {
-    val the = (this as ExtensionAware).the<Ev3PluginExtension>()
-    the.config()
-    return the
-}

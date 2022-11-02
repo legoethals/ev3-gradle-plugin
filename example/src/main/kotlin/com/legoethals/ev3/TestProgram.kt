@@ -6,7 +6,6 @@ import lejos.hardware.Sound
 import lejos.hardware.ev3.EV3
 import lejos.hardware.lcd.LCD
 import lejos.internal.ev3.EV3LED
-import lejos.robotics.RegulatedMotor
 
 fun main (args: Array<String>){
     val eV3 = BrickFinder.getLocal() as EV3

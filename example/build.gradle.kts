@@ -4,13 +4,17 @@ plugins {
     id("com.palantir.git-version") version "0.15.0"
 }
 
+//Optionally: set the project version to include in the manifest
 val gitVersion: groovy.lang.Closure<String> by extra
 version = gitVersion()
 
 ev3 {
-    mainClass.set("com.legoethals.ev3.TestisKt")
+    mainClass.set("com.legoethals.ev3.TestProgramKt")
+    jarDestinationDir.set("/home/lejos/programs")
+    jarLibsRelativeDir.set("libs")
     ssh {
         hostname.set("10.0.1.1")
+        port.set(22)
         username.set("root")
         password.set("")
     }
