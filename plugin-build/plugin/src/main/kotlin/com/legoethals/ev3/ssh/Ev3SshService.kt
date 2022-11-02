@@ -3,14 +3,16 @@ package com.legoethals.ev3.ssh
 import net.schmizz.sshj.SSHClient
 import net.schmizz.sshj.common.IOUtils
 import net.schmizz.sshj.connection.channel.direct.Parameters
-import net.schmizz.sshj.connection.channel.direct.Session
-import net.schmizz.sshj.transport.verification.HostKeyVerifier
+import net.schmizz.sshj.transport.verification.PromiscuousVerifier
+import net.schmizz.sshj.userauth.method.AuthMethod
+import net.schmizz.sshj.userauth.method.AuthNone
 import net.schmizz.sshj.xfer.FileSystemFile
+import org.gradle.internal.impldep.org.eclipse.jgit.errors.NotSupportedException
 import java.io.File
 import java.io.IOException
 import java.net.InetSocketAddress
 import java.net.ServerSocket
-import java.security.PublicKey
+import java.util.*
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -24,8 +26,8 @@ class Ev3SshService(
 ): SshService {
 
     private val ssh = SSHClient()
-    private var session: Session? = null
     private val connectRan: AtomicBoolean = AtomicBoolean(false)
+    private val serverSockets: MutableList<ServerSocket> = Collections.synchronizedList(mutableListOf())
 
     init {
         printConfig()
@@ -35,19 +37,17 @@ class Ev3SshService(
         if(connectRan.get()){
             return
         }
-        //https://github.com/hierynomus/sshj/blob/master/examples/src/main/java/net/schmizz/sshj/examples/InMemoryKnownHosts.java -> Do verify the hostkeys :)
-        ssh.addHostKeyVerifier(object : HostKeyVerifier {
-            override fun verify(p0: String?, p1: Int, p2: PublicKey?): Boolean {
-                return true
-            }
-
-            override fun findExistingAlgorithms(p0: String?, p1: Int): MutableList<String> {
-                return mutableListOf()
-            }
-        })
+        ssh.addHostKeyVerifier(PromiscuousVerifier())
         ssh.connect(hostname, port)
-        ssh.authPassword(username, password)
-        session = ssh.startSession()
+        if(password == null){
+            throw NotSupportedException("Password should be given (could be blank, in this case AuthNone is used for authentication)")
+        }
+        if(password.isBlank()) {
+            val method: AuthMethod = AuthNone()
+            ssh.auth(username, method)
+        } else {
+            ssh.authPassword(username, password)
+        }
         connectRan.set(true)
     }
 
@@ -61,7 +61,7 @@ class Ev3SshService(
     }
 
     override fun mkdirs(directory: String) {
-        executeCommand("mkdirs -p $directory")
+        executeCommand("mkdir -p $directory")
     }
 
     override fun downloadFileContents(path: String): String {
@@ -71,36 +71,50 @@ class Ev3SshService(
         return FileSystemFile("/tmp/$fileName").file.readText()
     }
 
-    override fun upload(path: String, file: File) {
+    override fun upload(directoryPath: String, file: File) {
         connectIfNotConnected()
-        ssh.newSCPFileTransfer().upload(FileSystemFile(file), path)
+        val filePath = directoryPath.trimEnd('/') + "/" + file.name
+        ssh.newSCPFileTransfer().upload(FileSystemFile(file), filePath)
     }
 
     override fun executeCommand(command: String) {
         connectIfNotConnected()
-        println("Executing command '$command'")
-        val cmd = session!!.exec(command)
-        println(IOUtils.readFully(cmd.inputStream).toString())
-        cmd.join(10, TimeUnit.SECONDS)
-        println("\nExit status: ${cmd.exitStatus}")
+        ssh.startSession().use {
+            println("Executing command '$command'")
+            val cmd = it!!.exec(command)
+            println(IOUtils.readFully(cmd.inputStream).toString())
+            cmd.join(10, TimeUnit.SECONDS)
+            println("Exit status: ${cmd.exitStatus}")
+        }
     }
 
     override fun localPortForward(localPort: Int, ev3Port: Int) {
         connectIfNotConnected()
-        val params = Parameters("0.0.0.0", localPort, "localhost", ev3Port)
-        val serverSocket = ServerSocket()
-        serverSocket.reuseAddress = true
-        serverSocket.bind(InetSocketAddress(params.localHost, params.localPort))
-        ssh.newLocalPortForwarder(params, serverSocket).listen()
+        Thread {
+            val serverSocket = ServerSocket()
+            serverSockets.add(serverSocket)
+            serverSocket.use {
+                val params = Parameters("0.0.0.0", localPort, "localhost", ev3Port)
+                serverSocket.reuseAddress = true
+                serverSocket.bind(InetSocketAddress(params.localHost, params.localPort))
+                println("Setting up local port forward")
+                ssh.newLocalPortForwarder(params, serverSocket).listen()
+            }
+        }.start()
     }
 
     override fun close() {
-        println("Closing connection")
-        try {
-            session?.close()
-        } catch (e: IOException) {
-            e.printStackTrace()
+        serverSockets.forEach {
+            try {
+                if(!it.isClosed){
+                    println("Closing server socket")
+                    it.close()
+                }
+            } catch (e: IOException) {
+                println("Could not close the serversocket (port forwarding)")
+            }
         }
+        println("Closing ssh connection")
         if(ssh.isConnected){
             ssh.disconnect()
         }

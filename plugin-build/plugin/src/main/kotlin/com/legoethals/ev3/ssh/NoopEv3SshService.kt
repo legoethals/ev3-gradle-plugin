@@ -27,8 +27,8 @@ class NoopEv3SshService(
         return "brol"
     }
 
-    override fun upload(path: String, file: File) {
-        println("Uploading file with name ${file.name} to path $path")
+    override fun upload(directoryPath: String, file: File) {
+        println("Uploading file with name ${file.name} to path $directoryPath")
     }
 
     override fun executeCommand(command: String) {
