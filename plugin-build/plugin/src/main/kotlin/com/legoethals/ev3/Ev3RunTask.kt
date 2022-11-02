@@ -33,10 +33,13 @@ abstract class Ev3RunTask @Inject constructor(private val sshServiceProvider: Ss
     fun run(){
         sshServiceProvider.create().use {
             if(debug.get()){
+//                #To debug, the jre must be built with the jdwp agent included!
                 //TODO Auto Attach intellij?
                 it.localPortForward(debugConfig.localPort.get(), debugConfig.remotePort.get())
+                it.executeCommand("jrun -cp ${jarDestinationDir.get()}/${jarFileName.get()} -agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=${debugConfig.remotePort.get()} ${mainClass.get()}")
+            } else {
+                it.executeCommand("jrun -cp ${jarDestinationDir.get()}/${jarFileName.get()} ${mainClass.get()}")
             }
-            it.executeCommand("jrun -cp ${jarDestinationDir.get()}/${jarFileName.get()} ${mainClass.get()}")
         }
     }
 }

@@ -144,6 +144,15 @@ class SshServiceTest {
     }
 
     @Test
+    fun `the ev3 service returns a null string when trying to download non-existent file contents`() {
+        WHEN
+        val downloadedContents = service.downloadFileContents("/tmp/brol4/doesnotexist")
+
+        THEN
+        downloadedContents shouldBe null
+    }
+
+    @Test
     fun `the ev3 service can setup local port forwarding`() {
         service.localPortForward(5005, 5005)
         Thread.sleep(2000)

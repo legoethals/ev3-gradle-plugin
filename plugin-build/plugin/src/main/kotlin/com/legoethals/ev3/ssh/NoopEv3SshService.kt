@@ -22,7 +22,7 @@ class NoopEv3SshService(
         println("Mkdirs for path '$directory'")
     }
 
-    override fun downloadFileContents(path: String): String {
+    override fun downloadFileContents(path: String): String? {
         println("Downloading filecontents on path $path, returning static response brol")
         return "brol"
     }

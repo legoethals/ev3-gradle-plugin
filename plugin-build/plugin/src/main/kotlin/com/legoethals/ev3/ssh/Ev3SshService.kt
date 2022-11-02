@@ -4,8 +4,6 @@ import net.schmizz.sshj.SSHClient
 import net.schmizz.sshj.common.IOUtils
 import net.schmizz.sshj.connection.channel.direct.Parameters
 import net.schmizz.sshj.transport.verification.PromiscuousVerifier
-import net.schmizz.sshj.userauth.method.AuthMethod
-import net.schmizz.sshj.userauth.method.AuthNone
 import net.schmizz.sshj.xfer.FileSystemFile
 import org.gradle.internal.impldep.org.eclipse.jgit.errors.NotSupportedException
 import java.io.File
@@ -23,7 +21,7 @@ class Ev3SshService(
     private val username: String,
     private val password: String?,
     private val identity_path: String?,
-): SshService {
+) : SshService {
 
     private val ssh = SSHClient()
     private val connectRan: AtomicBoolean = AtomicBoolean(false)
@@ -34,20 +32,15 @@ class Ev3SshService(
     }
 
     private fun connectIfNotConnected() {
-        if(connectRan.get()){
+        if (connectRan.get()) {
             return
         }
         ssh.addHostKeyVerifier(PromiscuousVerifier())
         ssh.connect(hostname, port)
-        if(password == null){
-            throw NotSupportedException("Password should be given (could be blank, in this case AuthNone is used for authentication)")
+        if (password == null) {
+            throw NotSupportedException("Password should be given and will be used. Identity_path is not yet supported")
         }
-        if(password.isBlank()) {
-            val method: AuthMethod = AuthNone()
-            ssh.auth(username, method)
-        } else {
-            ssh.authPassword(username, password)
-        }
+        ssh.authPassword(username, password)
         connectRan.set(true)
     }
 
@@ -64,11 +57,17 @@ class Ev3SshService(
         executeCommand("mkdir -p $directory")
     }
 
-    override fun downloadFileContents(path: String): String {
+    override fun downloadFileContents(path: String): String? {
         connectIfNotConnected()
-        val fileName = path.split("/").last()
-        ssh.newSCPFileTransfer().download(path, FileSystemFile("/tmp/"))
-        return FileSystemFile("/tmp/$fileName").file.readText()
+        val targetFile =
+            FileSystemFile(File.createTempFile("ev3-gradle-plugin-fileContents", UUID.randomUUID().toString()))
+        try {
+            ssh.newSCPFileTransfer().download(path, targetFile)
+        } catch (e: IOException) {
+            println("Problem downloading file: ${e.message}")
+            return null
+        }
+        return targetFile.file.readText()
     }
 
     override fun upload(directoryPath: String, file: File) {
@@ -83,7 +82,7 @@ class Ev3SshService(
             println("Executing command '$command'")
             val cmd = it!!.exec(command)
             println(IOUtils.readFully(cmd.inputStream).toString())
-            cmd.join(10, TimeUnit.SECONDS)
+            cmd.join(1, TimeUnit.SECONDS)
             println("Exit status: ${cmd.exitStatus}")
         }
     }
@@ -106,7 +105,7 @@ class Ev3SshService(
     override fun close() {
         serverSockets.forEach {
             try {
-                if(!it.isClosed){
+                if (!it.isClosed) {
                     println("Closing server socket")
                     it.close()
                 }
@@ -115,7 +114,7 @@ class Ev3SshService(
             }
         }
         println("Closing ssh connection")
-        if(ssh.isConnected){
+        if (ssh.isConnected) {
             ssh.disconnect()
         }
     }

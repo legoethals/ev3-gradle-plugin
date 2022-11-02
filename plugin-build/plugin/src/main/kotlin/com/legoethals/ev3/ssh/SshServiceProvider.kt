@@ -8,7 +8,7 @@ interface SshServiceProvider {
 
 class Ev3SshServiceProvider(private val sshConfig: SshConfig) : SshServiceProvider {
     override fun create(): SshService {
-        return NoopEv3SshService(
+        return Ev3SshService(
             hostname = sshConfig.hostname.get(),
             port = sshConfig.port.get(),
             username = sshConfig.username.get(),

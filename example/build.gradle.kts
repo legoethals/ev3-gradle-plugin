@@ -10,7 +10,9 @@ version = gitVersion()
 ev3 {
     mainClass.set("com.legoethals.ev3.TestisKt")
     ssh {
-        hostname.set("ev2_usb")
+        hostname.set("10.0.1.1")
+        username.set("root")
+        password.set("")
     }
     debug {
         localPort.set(5005)
@@ -21,5 +23,4 @@ ev3 {
 dependencies {
     implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
     implementation("io.projectreactor:reactor-core:3.4.14")
-
 }
